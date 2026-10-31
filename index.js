@@ -12,12 +12,24 @@ const RAIO_TERRA = 6371000;
 const TAMANHO_CELULA_METROS = 20;
 const TAMANHO_CELULA_GRAUS = (TAMANHO_CELULA_METROS / RAIO_TERRA) * (180 / Math.PI);
 
+const RAIO_ENCONTRO = 20;
+
+const TOTAL_COLUNAS = Math.ceil(360 / TAMANHO_CELULA_GRAUS);
+const LARGURA_COLUNA = 360 / TOTAL_COLUNAS;
+
 function obterCelula(latitude, longitude) {
-    const x = Math.floor(longitude / TAMANHO_CELULA_GRAUS);
-    const y = Math.floor(latitude / TAMANHO_CELULA_GRAUS);
+    const longitudeNormalizada = ((longitude + 180) % 360 + 360) % 360;
+
+    const x = Math.floor(longitudeNormalizada / LARGURA_COLUNA);
+    const y = Math.floor((latitude + 90) / TAMANHO_CELULA_GRAUS);
 
     return { x, y };
 }
+
+function normalizarColuna(x) {
+    return ((x % TOTAL_COLUNAS) + TOTAL_COLUNAS) % TOTAL_COLUNAS;
+}
+
 //adiciona ao set
 function inserirNoIndice(monitorado) {
     const { x, y } = obterCelula(
@@ -36,7 +48,6 @@ function inserirNoIndice(monitorado) {
 
 
 //função para fazer o spatial rash  e encontrar os vizinhos de um monitorado'
-const RAIO_ENCONTRO = 20;
 
 function buscarVizinhos(monitorado) {
     const { x, y } = obterCelula(
@@ -44,41 +55,46 @@ function buscarVizinhos(monitorado) {
         monitorado.longitude
     );
 
-    const candidatos = [];
+    const encontrados = [];
+    const distanciaAngular = RAIO_ENCONTRO / RAIO_TERRA;
+    const latitudeRad = monitorado.latitude * Math.PI / 180;
 
-    // Distância angular equivalente a 20 metros
-    const alcanceAngular = RAIO_ENCONTRO / RAIO_TERRA;
-
-    const latRad = monitorado.latitude * Math.PI / 180;
-
-    // Quantidade de células para cobrir 20 metros em latitude
     const alcanceY = Math.ceil(
-        alcanceAngular * (180 / Math.PI) / TAMANHO_CELULA_GRAUS
+        (distanciaAngular * 180 / Math.PI) /
+        TAMANHO_CELULA_GRAUS
     );
 
-    // A abrangência em longitude depende da latitude.
-    const atingePolo =
-        Math.abs(latRad) + alcanceAngular >= Math.PI / 2;
+    const proximoPolo =
+        Math.abs(latitudeRad) + distanciaAngular >= Math.PI / 2;
 
-    const deltaLon = atingePolo
+    const deltaLongitude = proximoPolo
         ? Math.PI
-        : Math.asin(Math.min(1, Math.sin(alcanceAngular) / Math.cos(latRad)));
+        : Math.asin(
+            Math.min(1, Math.sin(distanciaAngular) / Math.cos(latitudeRad))
+        );
 
-    const alcanceX = Math.ceil(
-        deltaLon * (180 / Math.PI) / TAMANHO_CELULA_GRAUS
-    );
+    const alcanceX = proximoPolo
+        ? TOTAL_COLUNAS
+        : Math.ceil((deltaLongitude * 180 / Math.PI) / LARGURA_COLUNA);
 
-    const totalColunas = Math.ceil(360 / TAMANHO_CELULA_GRAUS);
+    // Se a busca abrange o globo, não repetir as mesmas colunas
+    const todasColunas = 2 * alcanceX + 1 >= TOTAL_COLUNAS;
 
-    // Consulta células próximas
-    for (let dx = -alcanceX; dx <= alcanceX; dx++) {
+    const inicioX = todasColunas ? 0 : -alcanceX;
+    const fimX = todasColunas ? TOTAL_COLUNAS - 1 : alcanceX;
+
+    for (let dx = inicioX; dx <= fimX; dx++) {
         for (let dy = -alcanceY; dy <= alcanceY; dy++) {
-            const chave = `${x + dx}:${y + dy}`;
-            const encontrados = indiceEspacial.get(chave);
+            const coluna = todasColunas
+                ? dx
+                : normalizarColuna(x + dx);
 
-            if (!encontrados) continue;
+            const chave = `${coluna}:${y + dy}`;
+            const candidatos = indiceEspacial.get(chave);
 
-            for (const candidato of encontrados) {
+            if (!candidatos) continue;
+
+            for (const candidato of candidatos) {
                 const distancia = calcularDistancia(
                     monitorado.latitude,
                     monitorado.longitude,
@@ -87,7 +103,7 @@ function buscarVizinhos(monitorado) {
                 );
 
                 if (distancia < RAIO_ENCONTRO) {
-                    candidatos.push({
+                    encontrados.push({
                         monitorado: candidato,
                         distancia
                     });
@@ -96,7 +112,7 @@ function buscarVizinhos(monitorado) {
         }
     }
 
-    return candidatos;
+    return encontrados;
 }
 
 //função para calcular as distancias
