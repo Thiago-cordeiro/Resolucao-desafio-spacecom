@@ -2,8 +2,37 @@ const fs = require("node:fs");
 const readline = require("node:readline");
 
 
-// //função para obter a celula
-// function obterCelula(lat, lon, tamanhoCelula) {}
+
+// A função recebe latitude e longitude e aplica Math.floor() para descobrir a célula correspondente.
+// Duas posições próximas podem cair na mesma célula, enquanto posições distantes geralmente cairão em células diferentes.
+
+
+// dois monitorados a menos de 20 metros não necessariamente estarão na mesma célula. Por isso, posteriormente também precisa ser considerados as células vizinhas.
+const RAIO_TERRA = 6371000;
+const TAMANHO_CELULA_METROS = 20;
+const TAMANHO_CELULA_GRAUS = (TAMANHO_CELULA_METROS / RAIO_TERRA) * (180 / Math.PI);
+
+function obterCelula(latitude, longitude) {
+    const x = Math.floor(longitude / TAMANHO_CELULA_GRAUS);
+    const y = Math.floor(latitude / TAMANHO_CELULA_GRAUS);
+
+    return { x, y };
+}
+//adiciona ao set
+function inserirNoIndice(monitorado) {
+    const { x, y } = obterCelula(
+        monitorado.latitude,
+        monitorado.longitude
+    );
+
+    const chave = `${x}:${y}`;
+
+    if (!indiceEspacial.has(chave)) {
+        indiceEspacial.set(chave, []);
+    }
+
+    indiceEspacial.get(chave).push(monitorado);
+}
 
 // //função para calcular as distancias
 // function calcularDistancia(lat1, lon1, lat2, lon2, unidade = 'm') {
@@ -39,7 +68,9 @@ function processarDados(monitorado) {
     }
 
     // Por enquanto, apenas mostramos o monitorado
-    console.log(`Processando ID: ${monitorado.idMonitorado}`);
+    // console.log(`Processando ID: ${monitorado.idMonitorado}`);
+    // Adiciona o monitorado ao índice espacial
+    inserirNoIndice(monitorado);
 }
 
 function converterLinha(linha) {
@@ -99,8 +130,16 @@ async function lerArquivo(caminho) {
         processarDados(monitorado);
         totalRegistros++;
     }
+    
 
     console.log(`Total de registros: ${totalRegistros}`);
+    //apenas para teste
+    console.log(
+    [...indiceEspacial.entries()].map(([chave, monitorados]) => ({
+        celula: chave,
+        ids: monitorados.map(m => m.idMonitorado)
+    }))
+);
 }
 
 lerArquivo("./dataset1.txt").catch(console.error);
