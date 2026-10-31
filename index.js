@@ -1,3 +1,5 @@
+const fs = require("node:fs");
+const readline = require("node:readline");
 
 
 // //função para obter a celula
@@ -23,11 +25,22 @@
 // //função para classificar o encontro
 // function classificarEncontro(){}
 
-// //função principal que controla as outras
-// function processarDados() {}
+const indiceEspacial = new Map();//map para armazenar monitorados de acordo com a sua localizaçõa
+let timestampAtual = null;
 
-const fs = require("node:fs");
-const readline = require("node:readline");
+function processarDados(monitorado) {
+
+    if (monitorado.timestamp !== timestampAtual) {
+        console.log(`Novo timestamp: ${monitorado.timestamp}`);
+        // Descarta os posicionamentos anteriores
+        indiceEspacial.clear();
+        // Atualiza o timestamp atual
+        timestampAtual = monitorado.timestamp;
+    }
+
+    // Por enquanto, apenas mostramos o monitorado
+    console.log(`Processando ID: ${monitorado.idMonitorado}`);
+}
 
 function converterLinha(linha) {
     const [
@@ -83,9 +96,7 @@ async function lerArquivo(caminho) {
 
         const monitorado = converterLinha(linha);
 
-        // Futuramente processarMonitorado() aqui.
-        console.log(monitorado);
-
+        processarDados(monitorado);
         totalRegistros++;
     }
 
