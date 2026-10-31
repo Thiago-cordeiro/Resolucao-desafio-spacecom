@@ -124,8 +124,8 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
     const dLon = rad(lon2 - lon1);
 
     const a = Math.sin(dLat / 2) ** 2 +
-              Math.cos(rad(lat1)) * Math.cos(rad(lat2)) *
-              Math.sin(dLon / 2) ** 2;
+        Math.cos(rad(lat1)) * Math.cos(rad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
 
     const distancia = 2 * R * Math.asin(Math.sqrt(Math.min(1, a)));
 
@@ -133,7 +133,27 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 // //função para classificar o encontro
-// function classificarEncontro(){}
+function classificarEncontro(a, b) {
+    // 1. Verifica se existe restrição de medida protetiva
+    const existeRestricao = (a.medidaProtetiva && a.idsRestricaoMedida.has(b.idMonitorado)) || (b.medidaProtetiva && b.idsRestricaoMedida.has(a.idMonitorado));
+
+    if (existeRestricao) {
+        return "protetiva";
+    }
+
+    // 2. Verifica se ambos pertencem à mesma facção
+    const mesmaFaccao =
+        a.faccaoMonitorado !== null &&
+        b.faccaoMonitorado !== null &&
+        a.faccaoMonitorado === b.faccaoMonitorado;
+
+    if (mesmaFaccao) {
+        return "faccao";
+    }
+
+    // 3. Caso não exista relação especial
+    return "generico";
+}
 
 const indiceEspacial = new Map();//map para armazenar monitorados de acordo com a sua localizaçõa
 let timestampAtual = null;
@@ -151,11 +171,19 @@ function processarDados(monitorado) {
     const encontrosAnteriores = buscarVizinhos(monitorado);
 
     for (const encontro of encontrosAnteriores) {
-        console.log(
-            `Encontro entre ${encontro.monitorado.idMonitorado} ` +
-            `e ${monitorado.idMonitorado}: ` +
-            `${encontro.distancia.toFixed(2)} metros`
-        );
+        const outro = encontro.monitorado;
+
+        const tipo = classificarEncontro(monitorado, outro);
+
+        console.log({
+            tipo,
+            monitoradosEncontro: [
+                outro.idMonitorado,
+                monitorado.idMonitorado
+            ],
+            timestamp: monitorado.timestamp,
+            distanciaMetros: encontro.distancia
+        });
     }
 
     // Por enquanto, apenas mostramos o monitorado
@@ -221,7 +249,7 @@ async function lerArquivo(caminho) {
         processarDados(monitorado);
         totalRegistros++;
     }
-    
+
 
     console.log(`Total de registros: ${totalRegistros}`);
     //apenas para teste
@@ -233,4 +261,10 @@ async function lerArquivo(caminho) {
     // );
 }
 
-lerArquivo("./dataset1.txt").catch(console.error);
+// lerArquivo("./dataset1.txt").catch(console.error);
+// lerArquivo("./dataset2.txt").catch(console.error);
+lerArquivo("./dataset3.txt").catch(console.error);
+// lerArquivo("./dataset4.txt").catch(console.error);
+// lerArquivo("./dataset5.txt").catch(console.error);
+// lerArquivo("./dataset6.txt").catch(console.error);
+// lerArquivo("./dataset7.txt").catch(console.error);
