@@ -1,7 +1,11 @@
 const fs = require("node:fs");
 const readline = require("node:readline");
 
-
+const streamSaida = fs.createWriteStream("./resultado.json", {
+    encoding: "utf8"
+});
+// Início do array JSON
+streamSaida.write("[\n");
 
 // A função recebe latitude e longitude e aplica Math.floor() para descobrir a célula correspondente.
 // Duas posições próximas podem cair na mesma célula, enquanto posições distantes geralmente cairão em células diferentes.
@@ -16,6 +20,8 @@ const RAIO_ENCONTRO = 20;
 
 const TOTAL_COLUNAS = Math.ceil(360 / TAMANHO_CELULA_GRAUS);
 const LARGURA_COLUNA = 360 / TOTAL_COLUNAS;
+
+let primeiroEncontro = true;
 
 function obterCelula(latitude, longitude) {
     const longitudeNormalizada = ((longitude + 180) % 360 + 360) % 360;
@@ -155,6 +161,37 @@ function classificarEncontro(a, b) {
     return "generico";
 }
 
+//montagem do objeto e salvando no json
+function salvarEncontro(a, b, tipo, distancia) {
+    const encontro = {
+        tipo,
+        monitoradosEncontro: [
+            a.idMonitorado,
+            b.idMonitorado
+        ],
+        timestamp: a.timestamp,
+        posicoes: {
+            [a.idMonitorado]: {
+                lat: a.latitude,
+                lon: a.longitude
+            },
+            [b.idMonitorado]: {
+                lat: b.latitude,
+                lon: b.longitude
+            }
+        },
+        distanciaMetros: distancia
+    };
+
+    if (!primeiroEncontro) {
+        streamSaida.write(",\n");
+    }
+
+    streamSaida.write(JSON.stringify(encontro));
+
+    primeiroEncontro = false;
+}
+
 const indiceEspacial = new Map();//map para armazenar monitorados de acordo com a sua localizaçõa
 let timestampAtual = null;
 
@@ -175,15 +212,12 @@ function processarDados(monitorado) {
 
         const tipo = classificarEncontro(monitorado, outro);
 
-        console.log({
+        salvarEncontro(
+            outro,
+            monitorado,
             tipo,
-            monitoradosEncontro: [
-                outro.idMonitorado,
-                monitorado.idMonitorado
-            ],
-            timestamp: monitorado.timestamp,
-            distanciaMetros: encontro.distancia
-        });
+            encontro.distancia
+        );
     }
 
     // Por enquanto, apenas mostramos o monitorado
@@ -250,7 +284,7 @@ async function lerArquivo(caminho) {
         totalRegistros++;
     }
 
-
+    streamSaida.end("\n]\n");
     console.log(`Total de registros: ${totalRegistros}`);
     //apenas para teste
     // console.log(
@@ -261,9 +295,9 @@ async function lerArquivo(caminho) {
     // );
 }
 
-// lerArquivo("./dataset1.txt").catch(console.error);
+lerArquivo("./dataset1.txt").catch(console.error);
 // lerArquivo("./dataset2.txt").catch(console.error);
-lerArquivo("./dataset3.txt").catch(console.error);
+// lerArquivo("./dataset3.txt").catch(console.error);
 // lerArquivo("./dataset4.txt").catch(console.error);
 // lerArquivo("./dataset5.txt").catch(console.error);
 // lerArquivo("./dataset6.txt").catch(console.error);
