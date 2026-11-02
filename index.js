@@ -19,7 +19,8 @@ if (argumentos.length !== 1) {
 const caminhoDataset = path.resolve(
     path.extname(argumentos[0]) ? argumentos[0] : `${argumentos[0]}.txt`
 );
-const caminhoResultado = path.resolve("resultado.json");
+const nomeDataset = path.basename(caminhoDataset, path.extname(caminhoDataset));
+const caminhoResultado = path.resolve(`resultado_${nomeDataset}.json`);
 
 // Valida a entrada antes de criar ou sobrescrever o resultado.
 try {
@@ -28,7 +29,7 @@ try {
     }
     fs.accessSync(caminhoDataset, fs.constants.R_OK);
     if (caminhoDataset === caminhoResultado) {
-        throw new Error("O dataset deve ser diferente do arquivo resultado.json.");
+        throw new Error("O dataset deve ser diferente do arquivo de resultado.");
     }
 } catch (erro) {
     console.error(`Não foi possível abrir o dataset: ${caminhoDataset}`);

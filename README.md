@@ -30,7 +30,7 @@ Cada comando processa um dataset. Também é possível omitir a extensão (`node
 node index.js "datasets/dataset1.txt"
 ```
 
-O resultado é gravado em `resultado.json` na pasta em que o comando foi executado. **Cada execução sobrescreve o resultado anterior**; copie ou renomeie o arquivo antes de avaliar outro dataset se quiser preservar os resultados. Ao concluir, o terminal informa o dataset processado, o total de registros e o caminho do resultado.
+O resultado é gravado na pasta em que o comando foi executado, com o nome `resultado_<nome-do-dataset>.json`. Por exemplo, `dataset1.txt` gera `resultado_dataset1.json` e `dataset2.txt` gera `resultado_dataset2.json`, preservando os resultados dos outros datasets. Executar novamente o mesmo dataset sobrescreve apenas o resultado correspondente. Ao concluir, o terminal informa o dataset processado, o total de registros e o caminho do resultado.
 
 Os datasets são ignorados pelo Git (`dataset*.txt`) e devem ser adicionados localmente antes da execução. Para executar o sétimo, adicione também o arquivo `dataset7.txt`.
 
