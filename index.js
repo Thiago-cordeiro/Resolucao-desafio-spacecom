@@ -15,10 +15,7 @@ if (argumentos.length !== 1) {
     process.exit(1);
 }
 
-// Também aceita o nome sem extensão: node index.js dataset1
-const caminhoDataset = path.resolve(
-    path.extname(argumentos[0]) ? argumentos[0] : `${argumentos[0]}.txt`
-);
+const caminhoDataset = path.resolve( path.extname(argumentos[0]) ? argumentos[0] : `${argumentos[0]}.txt`);
 const nomeDataset = path.basename(caminhoDataset, path.extname(caminhoDataset));
 const caminhoResultado = path.resolve(`resultado_${nomeDataset}.json`);
 
@@ -43,21 +40,17 @@ const streamSaida = fs.createWriteStream(caminhoResultado, {
 // Início do array JSON
 streamSaida.write("[\n");
 
-// A função recebe latitude e longitude e aplica Math.floor() para descobrir a célula correspondente.
-// Duas posições próximas podem cair na mesma célula, enquanto posições distantes geralmente cairão em células diferentes.
 
-
-// dois monitorados a menos de 20 metros não necessariamente estarão na mesma célula. Por isso, posteriormente também precisa ser considerados as células vizinhas.
+// Constantes e estados
 const RAIO_TERRA = 6371000;
 const TAMANHO_CELULA_METROS = 20;
 const TAMANHO_CELULA_GRAUS = (TAMANHO_CELULA_METROS / RAIO_TERRA) * (180 / Math.PI);
-
 const RAIO_ENCONTRO = 20;
-
 const TOTAL_COLUNAS = Math.ceil(360 / TAMANHO_CELULA_GRAUS);
 const LARGURA_COLUNA = 360 / TOTAL_COLUNAS;
-
 let primeiroEncontro = true;
+const indiceEspacial = new Map();
+let timestampAtual = null;
 
 function obterCelula(latitude, longitude) {
     const longitudeNormalizada = ((longitude + 180) % 360 + 360) % 360;
@@ -88,9 +81,7 @@ function inserirNoIndice(monitorado) {
     indiceEspacial.get(chave).push(monitorado);
 }
 
-
 //função para fazer o spatial rash  e encontrar os vizinhos de um monitorado'
-
 function buscarVizinhos(monitorado) {
     const { x, y } = obterCelula(
         monitorado.latitude,
@@ -101,13 +92,8 @@ function buscarVizinhos(monitorado) {
     const distanciaAngular = RAIO_ENCONTRO / RAIO_TERRA;
     const latitudeRad = monitorado.latitude * Math.PI / 180;
 
-    const alcanceY = Math.ceil(
-        (distanciaAngular * 180 / Math.PI) /
-        TAMANHO_CELULA_GRAUS
-    );
-
-    const proximoPolo =
-        Math.abs(latitudeRad) + distanciaAngular >= Math.PI / 2;
+    const alcanceY = Math.ceil( (distanciaAngular * 180 / Math.PI) / TAMANHO_CELULA_GRAUS );
+    const proximoPolo = Math.abs(latitudeRad) + distanciaAngular >= Math.PI / 2;
 
     const deltaLongitude = proximoPolo
         ? Math.PI
@@ -127,9 +113,7 @@ function buscarVizinhos(monitorado) {
 
     for (let dx = inicioX; dx <= fimX; dx++) {
         for (let dy = -alcanceY; dy <= alcanceY; dy++) {
-            const coluna = todasColunas
-                ? dx
-                : normalizarColuna(x + dx);
+            const coluna = todasColunas ? dx : normalizarColuna(x + dx);
 
             const chave = `${coluna}:${y + dy}`;
             const candidatos = indiceEspacial.get(chave);
@@ -157,7 +141,7 @@ function buscarVizinhos(monitorado) {
     return encontrados;
 }
 
-//função para calcular as distancias
+//haversine
 function calcularDistancia(lat1, lon1, lat2, lon2) {
     const R = 6371000;
     const rad = graus => graus * Math.PI / 180;
@@ -174,16 +158,15 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
     return distancia;
 }
 
-// //função para classificar o encontro
 function classificarEncontro(a, b) {
-    // 1. Verifica se existe restrição de medida protetiva
+    //medida protetiva
     const existeRestricao = (a.medidaProtetiva && a.idsRestricaoMedida.has(b.idMonitorado)) || (b.medidaProtetiva && b.idsRestricaoMedida.has(a.idMonitorado));
 
     if (existeRestricao) {
         return "protetiva";
     }
 
-    // 2. Verifica se ambos pertencem à mesma facção
+    //facção
     const mesmaFaccao =
         a.faccaoMonitorado !== null &&
         b.faccaoMonitorado !== null &&
@@ -193,7 +176,6 @@ function classificarEncontro(a, b) {
         return "faccao";
     }
 
-    // 3. Caso não exista relação especial
     return "generico";
 }
 
@@ -228,15 +210,11 @@ function salvarEncontro(a, b, tipo, distancia) {
     primeiroEncontro = false;
 }
 
-const indiceEspacial = new Map();//map para armazenar monitorados de acordo com a sua localizaçõa
-let timestampAtual = null;
-
 function processarDados(monitorado) {
 
     if (monitorado.timestamp !== timestampAtual) {
-        // Descarta os posicionamentos anteriores
+        // Descarta os posicionamentos anteriores e troca o timestamp atual
         indiceEspacial.clear();
-        // Atualiza o timestamp atual
         timestampAtual = monitorado.timestamp;
     }
 
@@ -255,7 +233,6 @@ function processarDados(monitorado) {
         );
     }
 
-    // Adiciona o monitorado ao índice espacial
     inserirNoIndice(monitorado);
 }
 
@@ -306,7 +283,7 @@ async function lerArquivo(caminho) {
     for await (const linha of leitor) {
         if (primeiraLinha) {
             primeiraLinha = false;
-            continue; // Ignora o cabeçalho
+            continue;
         }
 
         if (!linha.trim()) continue;
@@ -323,13 +300,6 @@ async function lerArquivo(caminho) {
         console.log(`Total de registros: ${totalRegistros}`);
         console.log(`Resultado salvo em: ${caminhoResultado}`);
     });
-    //apenas para teste
-    // console.log(
-    //     [...indiceEspacial.entries()].map(([chave, monitorados]) => ({
-    //         celula: chave,
-    //         ids: monitorados.map(m => m.idMonitorado)
-    //     }))
-    // );
 }
 
 function informarErro(erro) {
