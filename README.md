@@ -2,6 +2,44 @@
 
 ## Como rodar o projeto
 
+É necessário ter o Node.js instalado (versão 18 ou superior). O projeto utiliza apenas módulos nativos do Node.js e não precisa de `npm install`.
+
+1. Coloque os arquivos dos datasets na pasta do projeto, ao lado do `index.js`.
+2. Abra o terminal nessa pasta.
+3. Execute o comando com o nome do dataset que deseja avaliar:
+
+```sh
+node index.js dataset1.txt
+```
+
+Para avaliar cada um dos sete datasets, execute o comando correspondente:
+
+```sh
+node index.js dataset1.txt
+node index.js dataset2.txt
+node index.js dataset3.txt
+node index.js dataset4.txt
+node index.js dataset5.txt
+node index.js dataset6.txt
+node index.js dataset7.txt
+```
+
+Cada comando processa um dataset. Também é possível omitir a extensão (`node index.js dataset1`) ou informar um caminho, usando aspas caso contenha espaços:
+
+```sh
+node index.js "datasets/dataset1.txt"
+```
+
+O resultado é gravado em `resultado.json` na pasta em que o comando foi executado. **Cada execução sobrescreve o resultado anterior**; copie ou renomeie o arquivo antes de avaliar outro dataset se quiser preservar os resultados. Ao concluir, o terminal informa o dataset processado, o total de registros e o caminho do resultado.
+
+Os datasets são ignorados pelo Git (`dataset*.txt`) e devem ser adicionados localmente antes da execução. Para executar o sétimo, adicione também o arquivo `dataset7.txt`.
+
+Se nenhum dataset for informado ou o arquivo não existir, o programa mostra uma mensagem e encerra com código de erro, sem sobrescrever o resultado anterior. Para consultar a ajuda:
+
+```sh
+node index.js --help
+```
+
 ## Passos pensados na resolução
 ### PASSO 1
 O primeiro passo que fiz após ler e reler o enunciado do desafio, foi procurar por designs e algoritmos que pudessem me ajudar a fazer de forma eficiente o desafio.

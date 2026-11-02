@@ -1,7 +1,42 @@
 const fs = require("node:fs");
 const readline = require("node:readline");
+const path = require("node:path");
 
-const streamSaida = fs.createWriteStream("./resultado.json", {
+const argumentos = process.argv.slice(2);
+const ajuda = "Uso: node index.js <dataset.txt>\nExemplo: node index.js dataset1.txt";
+
+if (argumentos.length === 1 && ["--help", "-h"].includes(argumentos[0])) {
+    console.log(ajuda);
+    process.exit(0);
+}
+
+if (argumentos.length !== 1) {
+    console.error(ajuda);
+    process.exit(1);
+}
+
+// Também aceita o nome sem extensão: node index.js dataset1
+const caminhoDataset = path.resolve(
+    path.extname(argumentos[0]) ? argumentos[0] : `${argumentos[0]}.txt`
+);
+const caminhoResultado = path.resolve("resultado.json");
+
+// Valida a entrada antes de criar ou sobrescrever o resultado.
+try {
+    if (!fs.statSync(caminhoDataset).isFile()) {
+        throw new Error("O caminho informado não é um arquivo.");
+    }
+    fs.accessSync(caminhoDataset, fs.constants.R_OK);
+    if (caminhoDataset === caminhoResultado) {
+        throw new Error("O dataset deve ser diferente do arquivo resultado.json.");
+    }
+} catch (erro) {
+    console.error(`Não foi possível abrir o dataset: ${caminhoDataset}`);
+    console.error(erro.code === "ENOENT" ? "Arquivo não encontrado. Confira o nome e o caminho informado." : erro.message);
+    process.exit(1);
+}
+
+const streamSaida = fs.createWriteStream(caminhoResultado, {
     encoding: "utf8"
 });
 // Início do array JSON
@@ -198,7 +233,6 @@ let timestampAtual = null;
 function processarDados(monitorado) {
 
     if (monitorado.timestamp !== timestampAtual) {
-        // console.log(`Novo timestamp: ${monitorado.timestamp}`);
         // Descarta os posicionamentos anteriores
         indiceEspacial.clear();
         // Atualiza o timestamp atual
@@ -220,8 +254,6 @@ function processarDados(monitorado) {
         );
     }
 
-    // Por enquanto, apenas mostramos o monitorado
-    // console.log(`Processando ID: ${monitorado.idMonitorado}`);
     // Adiciona o monitorado ao índice espacial
     inserirNoIndice(monitorado);
 }
@@ -285,7 +317,11 @@ async function lerArquivo(caminho) {
     }
 
     streamSaida.end("\n]\n");
-    console.log(`Total de registros: ${totalRegistros}`);
+    streamSaida.on("finish", () => {
+        console.log(`Dataset processado: ${caminhoDataset}`);
+        console.log(`Total de registros: ${totalRegistros}`);
+        console.log(`Resultado salvo em: ${caminhoResultado}`);
+    });
     //apenas para teste
     // console.log(
     //     [...indiceEspacial.entries()].map(([chave, monitorados]) => ({
@@ -295,10 +331,11 @@ async function lerArquivo(caminho) {
     // );
 }
 
-lerArquivo("./dataset1.txt").catch(console.error);
-// lerArquivo("./dataset2.txt").catch(console.error);
-// lerArquivo("./dataset3.txt").catch(console.error);
-// lerArquivo("./dataset4.txt").catch(console.error);
-// lerArquivo("./dataset5.txt").catch(console.error);
-// lerArquivo("./dataset6.txt").catch(console.error);
-// lerArquivo("./dataset7.txt").catch(console.error);
+function informarErro(erro) {
+    console.error(`Erro ao processar o dataset: ${erro.message}`);
+    streamSaida.destroy();
+    process.exitCode = 1;
+}
+
+streamSaida.on("error", informarErro);
+lerArquivo(caminhoDataset).catch(informarErro);
