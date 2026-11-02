@@ -73,3 +73,7 @@ if (monitorado.timestamp !== timestampAtual) {
 nessa parte do código quando muda o time stamp eu limpo o índice para adicionar os novos dados a serem comparados, mantendo apenas os registros do timestamp atual e impedindo comparações entre timestamps diferentes.
 
 Outro fator, além de não carregar tudo em memória seria a questão do spatial hash que possibilita a comparação de apenas em quem está nas celulas próximas, diminuindo o tanto de operações e comparações que uma força bruta faria comparando todos com todos em todas as posições. E também para esse código eu utilizei a estrutura MAP do js que permite eu inserir um par chave valor que para busca é O(1)
+
+## Autor
+
+Thiago Cordeiro | thiagocordeiro2512@gmail.com 
